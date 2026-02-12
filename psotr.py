@@ -37,9 +37,9 @@ class PSO_Algorithm(object):
         self.global_best_position = None
         self.global_best_value = 999999999.0
 
-    def createParticals(self, n):
+    def createParticals(self, num_particles):
         self.particles = []
-        for i in range(n):
+        for i in range(num_particles):
             new_particle = Partical(self.lower_bound, self.upper_bound)
             self.particles.append(new_particle)
             if new_particle.best_value < self.global_best_value:
@@ -68,8 +68,7 @@ class PSO_Algorithm(object):
 
             if current_value < particle.best_value:
                 particle.best_value = current_value
-                particle.best_position[0] = particle.position[0]
-                particle.best_position[1] = particle.position[1]
+                particle.best_position = [particle.position[0], particle.position[1]]
 
             if current_value < self.global_best_value:
                 self.global_best_value = current_value
@@ -91,34 +90,27 @@ def run_pso_with_history(num_particles, total_epoch):
 
     for epoch in range(total_epoch):
         pso.search()
-        positions_this_epoch = []
-        for particle in pso.particles:
-            pos_copy = [particle.position[0], particle.position[1]]
-            positions_this_epoch.append(pos_copy)
 
+        positions_this_epoch = [particle.position[:] for particle in pso.particles]
         position_history.append(positions_this_epoch)
         best_value_history.append(pso.global_best_value)
-        gbest_copy = [pso.global_best_position[0], pso.global_best_position[1]]
-        gbest_position_history.append(gbest_copy)
+        gbest_position_history.append([pso.global_best_position[0], pso.global_best_position[1]])
 
     return position_history, best_value_history, gbest_position_history
+
 
 # This is the top level function
 # 1
 def animate_pso():
     position_history, best_value_history, gbest_position_history = run_pso_with_history(10, 50)
-    total_epoch = len(position_history)
-    num_particles = len(position_history[0])
 
     fig, ax = plt.subplots()
     ax.set_xlim(-10, 10)
     ax.set_ylim(-10, 10)
-    ax.set_xlabel("x")
-    ax.set_ylabel("y")
 
     color_list = []
-    for i in range(num_particles):
-        color_list.append(plt.cm.tab10(i / float(num_particles)))
+    for i in range(len(position_history[0])):
+        color_list.append(plt.cm.tab10(i / float(len(position_history[0]))))
 
     zoom_half_width = 1.2
 
@@ -127,10 +119,10 @@ def animate_pso():
 
         gx = gbest_position_history[frame][0]
         gy = gbest_position_history[frame][1]
-        if total_epoch <= 1:
+        if len(best_value_history) <= 1:
             t = 1.0
         else:
-            t = frame / float(total_epoch - 1)
+            t = frame / float(len(best_value_history) - 1)
         if t > 1.0:
             t = 1.0
         half = 10.0 * (1.0 - t) + zoom_half_width * t
@@ -140,10 +132,8 @@ def animate_pso():
         yhi = gy + half
         ax.set_xlim(xlo, xhi)
         ax.set_ylim(ylo, yhi)
-        ax.set_xlabel("x")
-        ax.set_ylabel("y")
 
-        for particle_id in range(num_particles):
+        for particle_id in range(len(position_history[0])):
             trace_x = []
             trace_y = []
             for epoch in range(frame + 1):
@@ -153,19 +143,17 @@ def animate_pso():
 
         xs = []
         ys = []
-        for particle_id in range(num_particles):
+        for particle_id in range(len(position_history[0])):
             xs.append(position_history[frame][particle_id][0])
             ys.append(position_history[frame][particle_id][1])
         ax.scatter(xs, ys, s=60, c="blue", zorder=5, edgecolors="white")
 
-        title_str = "Epoch " + str(frame + 1) + "/" + str(total_epoch) + "   best = " + str(round(best_value_history[frame], 6))
+        title_str = "Epoch " + str(frame + 1) + "/" + str(len(best_value_history)) + "   best = " + str(round(best_value_history[frame], 6))
         ax.set_title(title_str)
 
-    ani = matplotlib.animation.FuncAnimation(
-        fig, update, frames=total_epoch, interval=200, blit=False
-    )
-    # This is the number 7 in the mermaid diagram
+    ani = matplotlib.animation.FuncAnimation(fig, update, frames=len(best_value_history), interval=200, blit=False)
     plt.show()
+
 
 # The top level function
 def PSO_test_run():
@@ -186,3 +174,10 @@ def PSO_test_run():
 # this is the entry point of the program
 if __name__ == "__main__":
     animate_pso()
+
+
+"""
+cd /Users/imyanming/Documents/Vmware/PSO
+source venv/bin/activate
+python psotr.py
+"""
